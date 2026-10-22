@@ -1,0 +1,3289 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="oscuro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lista de tareas diaria: organiza tu día por horas, prioridades y categorías.">
+    <title>Mi Día · Lista de tareas</title>
+    <script>
+        // El tema oscuro es el de por defecto; si el usuario eligió el claro, se aplica antes de pintar
+        try {
+            if (localStorage.getItem("midia-tema") === "claro") {
+                document.documentElement.dataset.tema = "claro";
+            }
+        } catch (error) { }
+
+        // Se detecta el navegador para darle a la página sus propios colores
+        (function () {
+            const ua = navigator.userAgent;
+            let navegador = "otro";
+            if (/Claude\/|Electron\//.test(ua)) navegador = "claude";
+            else if (navigator.brave) navegador = "brave";
+            else if (/SamsungBrowser/.test(ua)) navegador = "samsung";
+            else if (/OPR\/|Opera/.test(ua)) navegador = "opera";
+            else if (/Edg(e|A|iOS)?\//.test(ua)) navegador = "edge";
+            else if (/Firefox\/|FxiOS/.test(ua)) navegador = "firefox";
+            else if (/Chrome\/|CriOS/.test(ua)) navegador = "chrome";
+            else if (/Safari\//.test(ua)) navegador = "safari";
+            document.documentElement.dataset.navegador = navegador;
+            document.documentElement.classList.add("entrada");
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+    <style>
+        /* =========================================================
+           COLORES Y VARIABLES
+           ========================================================= */
+        :root {
+            --fondo: #F2F4F9;
+            --superficie: #FFFFFF;
+            --superficie-2: #E9EDF7;
+            --tinta: #161B33;
+            --tinta-suave: #5B6280;
+            --linea: #DCE1EE;
+            --marca-claro: #2B3A8C;
+            --marca-oscuro: #8E9BFF;
+            --cab-a: #222E78;
+            --cab-b: #3A4BB0;
+            --brillo: #FFC23D;
+            --ancho: 1180px;
+            --marca: var(--marca-claro);
+            --marca-texto: #FFFFFF;
+            --sol: #FFC23D;
+            --alta: #E5484D;
+            --media: #D98A0B;
+            --baja: #2FA38A;
+            --sombra: 0 1px 2px rgba(22, 27, 51, .06), 0 12px 32px -12px rgba(43, 58, 140, .18);
+            --radio-grande: 22px;
+            --radio: 12px;
+            --fuente-titulo: 'Bricolage Grotesque', system-ui, sans-serif;
+            --fuente-texto: 'DM Sans', system-ui, sans-serif;
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-tema="claro"]) {
+                --fondo: #0F1329;
+                --superficie: #181D38;
+                --superficie-2: #222849;
+                --tinta: #EEF0FA;
+                --tinta-suave: #9AA1C3;
+                --linea: #2C3358;
+                --marca: var(--marca-oscuro);
+                --marca-texto: #0F1329;
+                --alta: #FF6B70;
+                --media: #F5B23D;
+                --baja: #4FD1B0;
+                --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px -16px rgba(0, 0, 0, .6);
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-tema="oscuro"] {
+            --fondo: #0F1329;
+            --superficie: #181D38;
+            --superficie-2: #222849;
+            --tinta: #EEF0FA;
+            --tinta-suave: #9AA1C3;
+            --linea: #2C3358;
+            --marca: var(--marca-oscuro);
+            --marca-texto: #0F1329;
+            --alta: #FF6B70;
+            --media: #F5B23D;
+            --baja: #4FD1B0;
+            --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px -16px rgba(0, 0, 0, .6);
+            color-scheme: dark;
+        }
+
+        /* =========================================================
+           BASE
+           ========================================================= */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--fuente-texto);
+            font-size: 1rem;
+            line-height: 1.5;
+            background-color: var(--fondo);
+            color: var(--tinta);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color .3s, color .3s;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--fuente-titulo);
+            line-height: 1.1;
+        }
+
+        button, input, select, textarea {
+            font: inherit;
+            color: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--sol);
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+
+        .oculto {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        /* =========================================================
+           HEADER
+           ========================================================= */
+        header {
+            background: linear-gradient(120deg, var(--cab-a), var(--cab-b));
+            color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Sol de fondo que sube según la hora del día */
+        header::before {
+            content: "";
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            right: -80px;
+            bottom: calc(-420px + var(--altura-sol, 50%));
+            border-radius: 50%;
+            background: radial-gradient(circle, color-mix(in srgb, var(--brillo) 60%, transparent) 0%, transparent 65%);
+            pointer-events: none;
+        }
+
+        .cabecera {
+            position: relative;
+            max-width: var(--ancho);
+            margin: 0 auto;
+            padding: 48px 24px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 32px;
+        }
+
+        hgroup h1 {
+            font-size: clamp(2.4rem, 6vw, 4.2rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        hgroup p {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, .8);
+        }
+
+        hgroup time::first-letter {
+            text-transform: uppercase;
+        }
+
+        #fraseDia {
+            margin-top: 18px;
+            max-width: 46ch;
+            color: rgba(255, 255, 255, .92);
+        }
+
+        /* Anillo de progreso */
+        figure.anillo {
+            position: relative;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .anillo svg {
+            width: 150px;
+            height: 150px;
+            transform: rotate(-90deg);
+        }
+
+        .anillo circle {
+            fill: none;
+            stroke-width: 12;
+        }
+
+        .anillo .pista {
+            stroke: rgba(255, 255, 255, .15);
+        }
+
+        .anillo .relleno {
+            stroke: var(--brillo);
+            stroke-linecap: round;
+            stroke-dasharray: 326.73;
+            stroke-dashoffset: 326.73;
+            transition: stroke-dashoffset .8s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .anillo .porcentaje {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--fuente-titulo);
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .anillo figcaption {
+            margin-top: 8px;
+            font-size: .9rem;
+            color: rgba(255, 255, 255, .8);
+        }
+
+        /* =========================================================
+           NAV
+           ========================================================= */
+        body > nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background-color: var(--superficie);
+            border-bottom: 1px solid var(--linea);
+        }
+
+        .barra-nav {
+            max-width: var(--ancho);
+            margin: 0 auto;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filtros {
+            list-style: none;
+            display: flex;
+            gap: 4px;
+            background-color: var(--superficie-2);
+            padding: 4px;
+            border-radius: 999px;
+        }
+
+        .filtros button,
+        .vistas button {
+            border: none;
+            background: none;
+            padding: 8px 16px;
+            border-radius: 999px;
+            color: var(--tinta-suave);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color .2s, color .2s;
+        }
+
+        .filtros button:hover,
+        .vistas button:hover {
+            color: var(--tinta);
+        }
+
+        .filtros button[aria-pressed="true"],
+        .vistas button[aria-pressed="true"] {
+            background-color: var(--superficie);
+            color: var(--tinta);
+            box-shadow: 0 1px 3px rgba(22, 27, 51, .12);
+        }
+
+        .contador {
+            font-size: .8rem;
+            min-width: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background-color: var(--linea);
+            color: var(--tinta);
+        }
+
+        .buscador {
+            flex: 1;
+            min-width: 180px;
+            position: relative;
+        }
+
+        .buscador input {
+            width: 100%;
+            padding: 10px 14px 10px 40px;
+            border: 1px solid var(--linea);
+            border-radius: 999px;
+            background-color: var(--fondo);
+            outline: none;
+        }
+
+        .buscador input:focus {
+            border-color: var(--marca);
+        }
+
+        .buscador svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--tinta-suave);
+        }
+
+        .vistas {
+            display: flex;
+            gap: 4px;
+            background-color: var(--superficie-2);
+            padding: 4px;
+            border-radius: 999px;
+        }
+
+        .boton-tema {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--linea);
+            background-color: var(--superficie);
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+        }
+
+        /* =========================================================
+           MAIN
+           ========================================================= */
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: var(--ancho);
+            margin: 0 auto;
+            padding: 32px 24px 56px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            grid-template-areas:
+                "formulario tareas"
+                "lateral    tareas";
+            gap: 24px;
+            align-items: start;
+        }
+
+        /* =========================================================
+           SECTION
+           ========================================================= */
+        section {
+            background-color: var(--superficie);
+            border-radius: var(--radio-grande);
+            box-shadow: var(--sombra);
+            padding: 28px;
+        }
+
+        section > h2,
+        aside > h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin-bottom: 20px;
+        }
+
+        #nuevaTarea {
+            grid-area: formulario;
+        }
+
+        #tareas {
+            grid-area: tareas;
+            min-height: 560px;
+        }
+
+        /* Formulario */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .campo label,
+        legend {
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--tinta-suave);
+        }
+
+        .campo input,
+        .campo select,
+        .campo textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--linea);
+            border-radius: var(--radio);
+            background-color: var(--fondo);
+            outline: none;
+            transition: border-color .2s, background-color .2s;
+        }
+
+        .campo input:focus,
+        .campo select:focus,
+        .campo textarea:focus {
+            border-color: var(--marca);
+            background-color: var(--superficie);
+        }
+
+        .campo textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .dos-columnas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        fieldset {
+            border: none;
+        }
+
+        legend {
+            margin-bottom: 8px;
+        }
+
+        .opciones-prioridad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .opciones-prioridad input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .opciones-prioridad label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 6px;
+            border: 1px solid var(--linea);
+            border-radius: var(--radio);
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color .2s, background-color .2s;
+        }
+
+        .opciones-prioridad label::before {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: var(--color-prioridad);
+        }
+
+        .opciones-prioridad input:checked + label {
+            border-color: var(--color-prioridad);
+            background-color: color-mix(in srgb, var(--color-prioridad) 12%, transparent);
+        }
+
+        .opciones-prioridad input:focus-visible + label {
+            outline: 3px solid var(--sol);
+            outline-offset: 2px;
+        }
+
+        .p-alta { --color-prioridad: var(--alta); }
+        .p-media { --color-prioridad: var(--media); }
+        .p-baja { --color-prioridad: var(--baja); }
+
+        .boton-principal {
+            border: none;
+            background-color: var(--marca);
+            color: var(--marca-texto);
+            padding: 14px;
+            border-radius: var(--radio);
+            font-weight: 700;
+            font-size: 1rem;
+            transition: transform .15s, filter .2s;
+        }
+
+        .boton-principal:hover {
+            filter: brightness(1.1);
+        }
+
+        .boton-principal:active {
+            transform: scale(.98);
+        }
+
+        /* Cabecera de la sección de tareas */
+        .cabecera-tareas {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .cabecera-tareas h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+        }
+
+        .boton-texto {
+            border: none;
+            background: none;
+            color: var(--tinta-suave);
+            font-size: .9rem;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .boton-texto:hover {
+            color: var(--alta);
+        }
+
+        .boton-texto:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+
+        /* Grupos (mañana, tarde, noche) */
+        .grupo + .grupo {
+            margin-top: 28px;
+        }
+
+        .grupo h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--tinta-suave);
+            margin-bottom: 12px;
+        }
+
+        .grupo h3::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: var(--linea);
+        }
+
+        .lista {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* =========================================================
+           ARTICLE (cada tarea)
+           ========================================================= */
+        article.tarea {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: start;
+            gap: 14px;
+            padding: 16px 16px 16px 18px;
+            border: 1px solid var(--linea);
+            border-radius: var(--radio);
+            background-color: var(--superficie);
+            position: relative;
+            transition: border-color .2s, opacity .3s;
+        }
+
+        article.tarea::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 14px;
+            bottom: 14px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background-color: var(--color-prioridad);
+        }
+
+        article.tarea:hover {
+            border-color: color-mix(in srgb, var(--marca) 40%, var(--linea));
+        }
+
+        article.tarea.nueva {
+            animation: entrar .35s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .check {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            margin-top: 1px;
+            border: 2px solid var(--linea);
+            border-radius: 50%;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: background-color .2s, border-color .2s;
+        }
+
+        .check:hover {
+            border-color: var(--baja);
+        }
+
+        .check::after {
+            content: "";
+            width: 6px;
+            height: 11px;
+            border: solid #FFFFFF;
+            border-width: 0 2.5px 2.5px 0;
+            transform: rotate(45deg) translate(-1px, -1px) scale(0);
+            transition: transform .2s cubic-bezier(.2, .8, .2, 1.4);
+        }
+
+        .check:checked {
+            background-color: var(--baja);
+            border-color: var(--baja);
+        }
+
+        .check:checked::after {
+            transform: rotate(45deg) translate(-1px, -1px) scale(1);
+        }
+
+        .tarea h4 {
+            font-family: var(--fuente-texto);
+            font-size: 1.02rem;
+            font-weight: 700;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .tarea .nota {
+            margin-top: 4px;
+            font-size: .92rem;
+            color: var(--tinta-suave);
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: .85rem;
+            color: var(--tinta-suave);
+        }
+
+        .meta time {
+            font-weight: 700;
+            color: var(--tinta);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .etiqueta {
+            padding: 2px 10px;
+            border-radius: 999px;
+            background-color: var(--superficie-2);
+        }
+
+        .etiqueta.prioridad {
+            color: var(--color-prioridad);
+            background-color: color-mix(in srgb, var(--color-prioridad) 12%, transparent);
+            font-weight: 500;
+        }
+
+        .borrar {
+            border: none;
+            background: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            color: var(--tinta-suave);
+            display: grid;
+            place-items: center;
+            opacity: .5;
+            transition: opacity .2s, background-color .2s, color .2s;
+        }
+
+        article.tarea:hover .borrar,
+        .borrar:focus-visible {
+            opacity: 1;
+        }
+
+        .borrar:hover {
+            background-color: color-mix(in srgb, var(--alta) 12%, transparent);
+            color: var(--alta);
+        }
+
+        .borrar svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        article.tarea.hecha {
+            opacity: .55;
+        }
+
+        article.tarea.hecha h4 {
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+            color: var(--tinta-suave);
+        }
+
+        mark {
+            background-color: color-mix(in srgb, var(--sol) 55%, transparent);
+            color: inherit;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
+        /* Estado vacío */
+        .vacio {
+            text-align: center;
+            padding: 64px 16px;
+            color: var(--tinta-suave);
+        }
+
+        .vacio svg {
+            width: 72px;
+            height: 72px;
+            margin-bottom: 16px;
+            color: var(--linea);
+        }
+
+        .vacio strong {
+            display: block;
+            font-family: var(--fuente-titulo);
+            font-size: 1.25rem;
+            color: var(--tinta);
+            margin-bottom: 4px;
+        }
+
+        /* =========================================================
+           VISTA LÍNEA DEL DÍA (horario)
+           ========================================================= */
+        .linea-dia {
+            position: relative;
+            border-top: 1px solid var(--linea);
+        }
+
+        .hora-fila {
+            height: 64px;
+            border-bottom: 1px solid var(--linea);
+            display: grid;
+            grid-template-columns: 58px 1fr;
+        }
+
+        .hora-fila span {
+            font-size: .8rem;
+            color: var(--tinta-suave);
+            font-variant-numeric: tabular-nums;
+            transform: translateY(-9px);
+            background-color: var(--superficie);
+            width: fit-content;
+            padding-right: 6px;
+        }
+
+        .bloques {
+            position: absolute;
+            top: 0;
+            left: 64px;
+            right: 0;
+            bottom: 0;
+        }
+
+        .bloque {
+            position: absolute;
+            left: 0;
+            right: 0;
+            min-height: 30px;
+            padding: 6px 12px;
+            border-radius: 10px;
+            border-left: 4px solid var(--color-prioridad);
+            background-color: color-mix(in srgb, var(--color-prioridad) 12%, var(--superficie));
+            font-size: .9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            text-align: left;
+            border-top: none;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .bloque time {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bloque.hecha {
+            opacity: .5;
+            text-decoration: line-through;
+        }
+
+        .ahora {
+            position: absolute;
+            left: 52px;
+            right: 0;
+            height: 2px;
+            background-color: var(--sol);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .ahora::before {
+            content: "";
+            position: absolute;
+            left: -5px;
+            top: -4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--sol);
+        }
+
+        .sin-hora {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            font-size: .9rem;
+            color: var(--tinta-suave);
+        }
+
+        .sin-hora .bloque {
+            position: static;
+            width: auto;
+        }
+
+        /* =========================================================
+           ASIDE
+           ========================================================= */
+        aside {
+            grid-area: lateral;
+            background-color: var(--superficie);
+            border-radius: var(--radio-grande);
+            box-shadow: var(--sombra);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        aside > h2 {
+            margin-bottom: 0;
+        }
+
+        .siguiente {
+            padding: 18px;
+            border-radius: var(--radio);
+            background: linear-gradient(120deg, var(--cab-a), var(--cab-b));
+            color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .siguiente::after {
+            content: "";
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            right: -50px;
+            top: -60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, color-mix(in srgb, var(--brillo) 55%, transparent), transparent 70%);
+        }
+
+        .siguiente p:first-child {
+            font-size: .85rem;
+            opacity: .8;
+        }
+
+        .siguiente strong {
+            display: block;
+            margin-top: 4px;
+            font-family: var(--fuente-titulo);
+            font-size: 1.25rem;
+            line-height: 1.2;
+        }
+
+        .siguiente time {
+            display: block;
+            margin-top: 6px;
+            font-size: .9rem;
+            opacity: .85;
+        }
+
+        dl.estadisticas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .estadisticas div {
+            padding: 14px 6px;
+            border-radius: var(--radio);
+            background-color: var(--superficie-2);
+        }
+
+        .estadisticas dd {
+            font-family: var(--fuente-titulo);
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .estadisticas dt {
+            margin-top: 6px;
+            font-size: .8rem;
+            color: var(--tinta-suave);
+            order: 2;
+        }
+
+        .estadisticas div {
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        /* Categorías */
+        .categorias {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .categorias li {
+            display: grid;
+            grid-template-columns: 26px 1fr auto;
+            align-items: center;
+            gap: 8px;
+            font-size: .92rem;
+        }
+
+        .categorias progress {
+            grid-column: 2 / 4;
+            width: 100%;
+            height: 6px;
+            appearance: none;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--superficie-2);
+            overflow: hidden;
+        }
+
+        .categorias progress::-webkit-progress-bar {
+            background-color: var(--superficie-2);
+        }
+
+        .categorias progress::-webkit-progress-value {
+            background-color: var(--marca);
+            border-radius: 6px;
+        }
+
+        .categorias progress::-moz-progress-bar {
+            background-color: var(--marca);
+            border-radius: 6px;
+        }
+
+        details {
+            border-top: 1px solid var(--linea);
+            padding-top: 18px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 700;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary::after {
+            content: "+";
+            font-size: 1.3rem;
+            line-height: 1;
+            color: var(--tinta-suave);
+            transition: transform .25s;
+        }
+
+        details[open] summary::after {
+            transform: rotate(45deg);
+        }
+
+        details ul {
+            margin-top: 12px;
+            padding-left: 18px;
+            color: var(--tinta-suave);
+            font-size: .92rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* =========================================================
+           FOOTER
+           ========================================================= */
+        footer {
+            background-color: var(--superficie);
+            border-top: 1px solid var(--linea);
+        }
+
+        .pie {
+            max-width: var(--ancho);
+            margin: 0 auto;
+            padding: 28px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: .9rem;
+            color: var(--tinta-suave);
+        }
+
+        .pie strong {
+            font-family: var(--fuente-titulo);
+            font-size: 1.15rem;
+            color: var(--tinta);
+        }
+
+        address {
+            font-style: normal;
+        }
+
+        footer a {
+            color: var(--marca);
+            font-weight: 500;
+        }
+
+        kbd {
+            font-family: inherit;
+            font-size: .8rem;
+            padding: 1px 6px;
+            border: 1px solid var(--linea);
+            border-bottom-width: 2px;
+            border-radius: 5px;
+            background-color: var(--fondo);
+        }
+
+        /* =========================================================
+           DIÁLOGO Y AVISOS
+           ========================================================= */
+        dialog {
+            margin: auto;
+            border: none;
+            border-radius: var(--radio-grande);
+            padding: 28px;
+            max-width: 380px;
+            width: calc(100% - 32px);
+            background-color: var(--superficie);
+            color: var(--tinta);
+            box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .45);
+        }
+
+        dialog::backdrop {
+            background-color: rgba(15, 19, 41, .55);
+            backdrop-filter: blur(3px);
+        }
+
+        dialog h2 {
+            font-size: 1.35rem;
+            margin-bottom: 8px;
+        }
+
+        dialog p {
+            color: var(--tinta-suave);
+        }
+
+        .botones-dialogo {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .boton-secundario {
+            border: 1px solid var(--linea);
+            background: none;
+            padding: 10px 18px;
+            border-radius: var(--radio);
+            font-weight: 500;
+        }
+
+        .boton-peligro {
+            border: none;
+            background-color: var(--alta);
+            color: #FFFFFF;
+            padding: 10px 18px;
+            border-radius: var(--radio);
+            font-weight: 700;
+        }
+
+        .aviso {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translate(-50%, 140%);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 14px 12px 20px;
+            border-radius: 999px;
+            background-color: #161B33;
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .5);
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .35s cubic-bezier(.2, .8, .2, 1), opacity .25s, visibility .35s;
+        }
+
+        .aviso.visible {
+            transform: translate(-50%, 0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .aviso button {
+            border: none;
+            background-color: var(--sol);
+            color: #161B33;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        @keyframes entrar {
+            from { opacity: 0; transform: translateY(-6px) scale(.98); }
+            to { opacity: 1; transform: none; }
+        }
+
+        /* =========================================================
+           NUEVO: días, categorías, edición, duración, reloj, confeti
+           ========================================================= */
+        .dias {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 18px;
+            padding: 4px;
+            border-radius: 999px;
+            background-color: rgba(255, 255, 255, .12);
+        }
+
+        .dias button {
+            border: none;
+            background: none;
+            color: #FFFFFF;
+            height: 36px;
+            min-width: 36px;
+            padding: 0 12px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            transition: background-color .2s;
+        }
+
+        .dias button:hover {
+            background-color: rgba(255, 255, 255, .16);
+        }
+
+        .dias svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #diaHoy[aria-current="date"] {
+            background-color: #FFFFFF;
+            color: #2B3A8C;
+        }
+
+        .opciones-categoria {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .opciones-categoria input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .opciones-categoria label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid var(--linea);
+            border-radius: 999px;
+            font-size: .92rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color .2s, background-color .2s;
+        }
+
+        .opciones-categoria input:checked + label {
+            border-color: var(--marca);
+            background-color: color-mix(in srgb, var(--marca) 12%, transparent);
+        }
+
+        .opciones-categoria input:focus-visible + label {
+            outline: 3px solid var(--sol);
+            outline-offset: 2px;
+        }
+
+        .cabecera-form {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .cabecera-form h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        #nuevaTarea.editando {
+            outline: 2px solid var(--marca);
+            outline-offset: -2px;
+        }
+
+        article.tarea.editando {
+            border-color: var(--marca);
+            background-color: color-mix(in srgb, var(--marca) 6%, var(--superficie));
+        }
+
+        .acciones {
+            display: flex;
+            gap: 2px;
+        }
+
+        .accion {
+            border: none;
+            background: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            color: var(--tinta-suave);
+            display: grid;
+            place-items: center;
+            opacity: .5;
+            transition: opacity .2s, background-color .2s, color .2s;
+        }
+
+        article.tarea:hover .accion,
+        .accion:focus-visible {
+            opacity: 1;
+        }
+
+        .accion:hover {
+            background-color: var(--superficie-2);
+            color: var(--tinta);
+        }
+
+        .accion.borrar:hover {
+            background-color: color-mix(in srgb, var(--alta) 12%, transparent);
+            color: var(--alta);
+        }
+
+        .accion svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .bloque {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0;
+            justify-content: center;
+        }
+
+        .bloque .linea-bloque {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .bloque .linea-bloque span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bloque small {
+            font-size: .78rem;
+            color: var(--tinta-suave);
+        }
+
+        .sin-hora .bloque {
+            flex-direction: row;
+        }
+
+        /* Modo concentración */
+        .concentracion {
+            border-top: 1px solid var(--linea);
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        .concentracion h3 {
+            font-size: 1.15rem;
+            text-align: left;
+        }
+
+        .enfoque {
+            margin-top: 4px;
+            font-size: .9rem;
+            color: var(--tinta-suave);
+            text-align: left;
+        }
+
+        .reloj {
+            display: block;
+            margin: 18px 0 14px;
+            font-family: var(--fuente-titulo);
+            font-size: 3.6rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .concentracion.corriendo .reloj {
+            color: var(--marca);
+        }
+
+        .modos {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            border-radius: 999px;
+            background-color: var(--superficie-2);
+        }
+
+        .modos button {
+            flex: 1;
+            border: none;
+            background: none;
+            padding: 6px 4px;
+            border-radius: 999px;
+            font-size: .85rem;
+            font-weight: 500;
+            color: var(--tinta-suave);
+        }
+
+        .modos button[aria-pressed="true"] {
+            background-color: var(--superficie);
+            color: var(--tinta);
+            box-shadow: 0 1px 3px rgba(22, 27, 51, .12);
+        }
+
+        .controles {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .boton-reloj {
+            flex: 1;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radio);
+            background-color: var(--sol);
+            color: #161B33;
+            font-weight: 700;
+        }
+
+        .boton-reiniciar {
+            width: 46px;
+            border: 1px solid var(--linea);
+            border-radius: var(--radio);
+            background: none;
+            display: grid;
+            place-items: center;
+            color: var(--tinta-suave);
+        }
+
+        .boton-reiniciar svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .accion.enfocar:hover {
+            color: var(--media);
+        }
+
+        /* Confeti */
+        .confeti {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 60;
+        }
+
+        .confeti i {
+            position: absolute;
+            top: -20px;
+            width: 9px;
+            height: 14px;
+            border-radius: 2px;
+            animation: caer var(--duracion) cubic-bezier(.25, .6, .4, 1) forwards;
+        }
+
+        @keyframes caer {
+            to {
+                transform: translate(var(--x), 110vh) rotate(var(--giro));
+            }
+        }
+
+
+        /* =========================================================
+           IDENTIDAD SEGÚN EL NAVEGADOR
+           Cada navegador tiene sus propios colores
+           ========================================================= */
+        :root[data-navegador="chrome"] {
+            --cab-a: #123A86; --cab-b: #1E66D6; --brillo: #FFCB45;
+            --marca-claro: #1A5BC4; --marca-oscuro: #8AB4FF;
+        }
+        :root[data-navegador="edge"] {
+            --cab-a: #083E58; --cab-b: #0E8A8C; --brillo: #63F0C8;
+            --marca-claro: #0B6E80; --marca-oscuro: #5EE7D0;
+        }
+        :root[data-navegador="firefox"] {
+            --cab-a: #2E1462; --cab-b: #8E2C86; --brillo: #FF9A3D;
+            --marca-claro: #7A2475; --marca-oscuro: #FF9E5E;
+        }
+        :root[data-navegador="safari"] {
+            --cab-a: #0A3F7A; --cab-b: #1C8FD9; --brillo: #A8E8FF;
+            --marca-claro: #0A66B8; --marca-oscuro: #7CC8FF;
+        }
+        :root[data-navegador="opera"] {
+            --cab-a: #5A0A16; --cab-b: #B8162C; --brillo: #FF9B8F;
+            --marca-claro: #A91429; --marca-oscuro: #FF7D88;
+        }
+        :root[data-navegador="brave"] {
+            --cab-a: #43160A; --cab-b: #C4420E; --brillo: #FFC15C;
+            --marca-claro: #B53C0C; --marca-oscuro: #FF9F55;
+        }
+        :root[data-navegador="samsung"] {
+            --cab-a: #24156E; --cab-b: #5B3CC4; --brillo: #C3B3FF;
+            --marca-claro: #4F37B8; --marca-oscuro: #B3A1FF;
+        }
+        :root[data-navegador="claude"] {
+            --cab-a: #2B1D17; --cab-b: #8C432A; --brillo: #F5AE85;
+            --marca-claro: #A84D2C; --marca-oscuro: #F2A07B;
+        }
+
+        .navegador {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+            height: 44px;
+            padding: 0 16px 0 6px;
+            border-radius: 999px;
+            background-color: rgba(255, 255, 255, .12);
+            font-size: .9rem;
+            vertical-align: top;
+            margin-top: 18px;
+        }
+
+        .navegador .logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background-color: rgba(255, 255, 255, .16);
+            font-size: 1.05rem;
+        }
+
+        /* Aurora animada en la cabecera, con los colores del navegador */
+        header::after {
+            content: "";
+            position: absolute;
+            inset: -40%;
+            background:
+                radial-gradient(closest-side at 20% 30%, color-mix(in srgb, var(--cab-b) 90%, #FFFFFF 10%), transparent),
+                radial-gradient(closest-side at 70% 70%, color-mix(in srgb, var(--brillo) 22%, transparent), transparent),
+                radial-gradient(closest-side at 40% 80%, color-mix(in srgb, var(--cab-a) 80%, #000000 20%), transparent);
+            opacity: .7;
+            animation: aurora 22s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        .cabecera {
+            z-index: 1;
+        }
+
+        @keyframes aurora {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            50% { transform: translate(6%, -4%) rotate(8deg) scale(1.08); }
+            100% { transform: translate(-5%, 3%) rotate(-6deg) scale(1.02); }
+        }
+
+        /* =========================================================
+           ANIMACIÓN DE ENTRADA (solo al abrir la página)
+           ========================================================= */
+        .entrada hgroup h1 {
+            animation: subir .7s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        .entrada hgroup p,
+        .entrada .dias,
+        .entrada .navegador,
+        .entrada #fraseDia {
+            animation: subir .7s .12s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        .entrada .anillo {
+            animation: aparecerAnillo .8s .1s cubic-bezier(.2, .8, .2, 1.2) both;
+        }
+
+        .entrada main > * {
+            animation: subir .7s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        .entrada main > :nth-child(1) { animation-delay: .25s; }
+        .entrada main > :nth-child(2) { animation-delay: .35s; }
+        .entrada main > :nth-child(3) { animation-delay: .45s; }
+
+        .entrada article.tarea,
+        .entrada .bloque {
+            animation: subir .5s cubic-bezier(.2, .8, .2, 1) both;
+            animation-delay: calc(.45s + var(--i, 0) * 45ms);
+        }
+
+        @keyframes subir {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @keyframes aparecerAnillo {
+            from { opacity: 0; transform: scale(.7) rotate(-20deg); }
+            to { opacity: 1; transform: none; }
+        }
+
+        /* Tachado que se dibuja al completar una tarea */
+        article.tarea h4 span.texto {
+            background-image: linear-gradient(currentColor, currentColor);
+            background-repeat: no-repeat;
+            background-position: 0 58%;
+            background-size: 0 2px;
+            transition: background-size .45s cubic-bezier(.2, .8, .2, 1), color .3s;
+        }
+
+        article.tarea.hecha h4 {
+            text-decoration: none;
+        }
+
+        article.tarea.hecha h4 span.texto {
+            background-size: 100% 2px;
+        }
+
+        article.tarea.recien-hecha {
+            animation: latido .5s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        @keyframes latido {
+            40% { transform: scale(1.015); border-color: var(--baja); }
+        }
+
+        .check:checked {
+            animation: pop .35s cubic-bezier(.2, .8, .2, 1.6);
+        }
+
+        @keyframes pop {
+            50% { transform: scale(1.25); }
+        }
+
+        /* =========================================================
+           PRÓXIMOS DÍAS (rellena el final de la sección de tareas)
+           ========================================================= */
+        #tareas {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .proximos {
+            margin-top: auto;
+            padding-top: 28px;
+        }
+
+        .proximos h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            color: var(--tinta-suave);
+            margin-bottom: 12px;
+        }
+
+        .proximos h3::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: var(--linea);
+        }
+
+        .proximos ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .proximos button {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--linea);
+            background-color: var(--fondo);
+            border-radius: var(--radio);
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transition: border-color .2s, transform .2s;
+        }
+
+        .proximos button:hover {
+            border-color: var(--marca);
+            transform: translateY(-2px);
+        }
+
+        .proximos .dia-nombre {
+            font-family: var(--fuente-titulo);
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .proximos .dia-fecha {
+            font-size: .82rem;
+            color: var(--tinta-suave);
+        }
+
+        .proximos .puntos {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            min-height: 8px;
+        }
+
+        .proximos .puntos i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-prioridad);
+        }
+
+        .proximos .dia-cuenta {
+            margin-top: 6px;
+            font-size: .85rem;
+            color: var(--tinta-suave);
+        }
+
+        /* =========================================================
+           DISTRIBUCIÓN SIN HUECOS
+           ========================================================= */
+        @media (min-width: 901px) {
+            #tareas {
+                align-self: stretch;
+            }
+        }
+
+        /* Pantallas medianas: el resumen va debajo, a todo el ancho y en tres columnas */
+        @media (min-width: 901px) and (max-width: 1279px) {
+            main {
+                grid-template-areas:
+                    "formulario tareas"
+                    "lateral    lateral";
+            }
+
+            aside {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-areas:
+                    "titulo     titulo       titulo"
+                    "siguiente  categorias   concentracion"
+                    "numeros    categorias   concentracion"
+                    "consejos   consejos     consejos";
+                column-gap: 32px;
+                row-gap: 18px;
+                align-items: start;
+            }
+
+            aside > h2 { grid-area: titulo; }
+            .siguiente { grid-area: siguiente; }
+            dl.estadisticas { grid-area: numeros; }
+            .bloque-categorias { grid-area: categorias; }
+            details { grid-area: consejos; }
+
+            .concentracion {
+                grid-area: concentracion;
+                border-top: none;
+                padding-top: 0;
+            }
+
+            .reloj {
+                margin: 12px 0 10px;
+                font-size: 3rem;
+            }
+        }
+
+        /* Pantallas grandes: tres columnas (formulario, tareas, resumen) */
+        @media (min-width: 1280px) {
+            :root {
+                --ancho: 1480px;
+            }
+
+            main {
+                grid-template-columns: 330px minmax(0, 1fr) 330px;
+                grid-template-areas: "formulario tareas lateral";
+            }
+
+            #nuevaTarea {
+                position: sticky;
+                top: 90px;
+            }
+        }
+
+        /* =========================================================
+           RESPONSIVE
+           ========================================================= */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "formulario"
+                    "tareas"
+                    "lateral";
+            }
+
+            #tareas {
+                min-height: 0;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .cabecera {
+                padding: 32px 16px 28px;
+                gap: 16px;
+            }
+
+            .anillo svg {
+                width: 104px;
+                height: 104px;
+            }
+
+            .anillo .porcentaje {
+                top: 52px;
+                font-size: 1.4rem;
+            }
+
+            #fraseDia {
+                display: none;
+            }
+
+            .navegador {
+                margin-left: 0;
+                margin-top: 10px;
+                height: 38px;
+                font-size: .82rem;
+            }
+
+            .navegador .logo {
+                width: 28px;
+                height: 28px;
+            }
+
+            .barra-nav {
+                padding: 10px 16px;
+                gap: 10px;
+            }
+
+            .filtros {
+                order: 4;
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .boton-tema {
+                order: 2;
+            }
+
+            .filtros li {
+                flex: 1;
+            }
+
+            .filtros button {
+                width: 100%;
+                justify-content: center;
+                padding: 8px 6px;
+            }
+
+            .buscador {
+                order: 1;
+            }
+
+            .vistas {
+                order: 3;
+                width: 100%;
+            }
+
+            .vistas button {
+                flex: 1;
+                justify-content: center;
+                padding: 8px 10px;
+            }
+
+            main {
+                padding: 20px 16px 40px;
+                gap: 16px;
+            }
+
+            section,
+            aside {
+                padding: 20px;
+            }
+
+            body > nav {
+                position: static;
+            }
+
+            /* En el móvil los botones de cada tarea van debajo del texto */
+            article.tarea {
+                grid-template-columns: auto 1fr;
+                row-gap: 6px;
+                padding: 14px 12px 10px 16px;
+            }
+
+            .acciones {
+                grid-column: 2;
+                margin-left: -8px;
+            }
+
+            .accion {
+                opacity: .8;
+            }
+
+            .cabecera-tareas {
+                flex-wrap: wrap;
+            }
+
+            .pie {
+                padding: 24px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- =====================================================
+         HEADER: cabecera con saludo, fecha y progreso del día
+         ===================================================== -->
+    <header>
+        <div class="cabecera">
+            <div class="titulares">
+                <hgroup>
+                    <h1 id="saludo">Buenos días</h1>
+                    <p><time id="fecha"></time></p>
+                </hgroup>
+
+                <div class="dias" role="group" aria-label="Cambiar de día">
+                    <button type="button" id="diaAnterior" aria-label="Día anterior">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <button type="button" id="diaHoy">Hoy</button>
+                    <button type="button" id="diaSiguiente" aria-label="Día siguiente">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div><p class="navegador" id="navegador"><span class="logo" id="logoNavegador" aria-hidden="true">🌐</span><span id="nombreNavegador">Tu navegador</span></p>
+
+                <p id="fraseDia">Apunta lo que tienes que hacer, ordénalo por horas y ve tachando.</p>
+            </div>
+
+            <figure class="anillo">
+                <svg viewBox="0 0 130 130" aria-hidden="true">
+                    <circle class="pista" cx="65" cy="65" r="52"></circle>
+                    <circle class="relleno" id="anilloRelleno" cx="65" cy="65" r="52"></circle>
+                </svg>
+                <output class="porcentaje" id="porcentaje">0%</output>
+                <figcaption id="textoProgreso">0 de 0 hechas</figcaption>
+            </figure>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         NAV: filtros, buscador, vistas y modo oscuro
+         ===================================================== -->
+    <nav aria-label="Filtros y vistas">
+        <div class="barra-nav">
+            <ul class="filtros">
+                <li><button type="button" data-filtro="todas" aria-pressed="true">Todas <span class="contador" id="contTodas">0</span></button></li>
+                <li><button type="button" data-filtro="pendientes" aria-pressed="false">Pendientes <span class="contador" id="contPendientes">0</span></button></li>
+                <li><button type="button" data-filtro="hechas" aria-pressed="false">Hechas <span class="contador" id="contHechas">0</span></button></li>
+            </ul>
+
+            <div class="buscador" role="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <label for="busqueda" class="oculto">Buscar tareas</label>
+                <input type="search" id="busqueda" placeholder="Buscar tareas…">
+            </div>
+
+            <div class="vistas" role="group" aria-label="Cambiar vista">
+                <button type="button" data-vista="lista" aria-pressed="true">Lista</button>
+                <button type="button" data-vista="horario" aria-pressed="false">Horario</button>
+            </div>
+
+            <button type="button" class="boton-tema" id="botonTema" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
+        </div>
+    </nav>
+
+    <!-- =====================================================
+         MAIN: contenido principal de la página
+         ===================================================== -->
+    <main>
+
+        <!-- SECTION 1: formulario para añadir una tarea -->
+        <section id="nuevaTarea" aria-labelledby="tituloNueva">
+            <div class="cabecera-form">
+                <h2 id="tituloNueva">Nueva tarea</h2>
+                <button type="button" class="boton-texto" id="botonCancelar" hidden>Cancelar</button>
+            </div>
+
+            <form id="formulario">
+                <div class="campo">
+                    <label for="nombreTarea">¿Qué tienes que hacer?</label>
+                    <input type="text" id="nombreTarea" maxlength="80" placeholder="Ej: Terminar la práctica de HTML" required>
+                </div>
+
+                <div class="dos-columnas">
+                    <div class="campo">
+                        <label for="horaTarea">Hora</label>
+                        <input type="time" id="horaTarea">
+                    </div>
+                    <div class="campo">
+                        <label for="duracionTarea">Duración</label>
+                        <select id="duracionTarea">
+                            <option value="15">15 min</option>
+                            <option value="30" selected>30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">1 h</option>
+                            <option value="90">1 h 30 min</option>
+                            <option value="120">2 h</option>
+                            <option value="180">3 h</option>
+                        </select>
+                    </div>
+                </div>
+
+                <fieldset>
+                    <legend>Categoría</legend>
+                    <div class="opciones-categoria">
+                        <input type="radio" name="categoria" id="catEstudio" value="estudio" checked>
+                        <label for="catEstudio"><span aria-hidden="true">📚</span>Estudio</label>
+
+                        <input type="radio" name="categoria" id="catTrabajo" value="trabajo">
+                        <label for="catTrabajo"><span aria-hidden="true">💼</span>Trabajo</label>
+
+                        <input type="radio" name="categoria" id="catCasa" value="casa">
+                        <label for="catCasa"><span aria-hidden="true">🏠</span>Casa</label>
+
+                        <input type="radio" name="categoria" id="catSalud" value="salud">
+                        <label for="catSalud"><span aria-hidden="true">💪</span>Salud</label>
+
+                        <input type="radio" name="categoria" id="catOcio" value="ocio">
+                        <label for="catOcio"><span aria-hidden="true">🎮</span>Ocio</label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Prioridad</legend>
+                    <div class="opciones-prioridad">
+                        <input type="radio" name="prioridad" id="prioridadAlta" value="alta">
+                        <label for="prioridadAlta" class="p-alta">Alta</label>
+
+                        <input type="radio" name="prioridad" id="prioridadMedia" value="media" checked>
+                        <label for="prioridadMedia" class="p-media">Media</label>
+
+                        <input type="radio" name="prioridad" id="prioridadBaja" value="baja">
+                        <label for="prioridadBaja" class="p-baja">Baja</label>
+                    </div>
+                </fieldset>
+
+                <div class="campo">
+                    <label for="notaTarea">Nota (opcional)</label>
+                    <textarea id="notaTarea" maxlength="140" placeholder="Algún detalle que no quieras olvidar"></textarea>
+                </div>
+
+                <button type="submit" class="boton-principal" id="botonGuardar">Añadir tarea</button>
+            </form>
+        </section>
+
+        <!-- SECTION 2: tareas del día (cada tarea es un ARTICLE) -->
+        <section id="tareas" aria-labelledby="tituloTareas">
+            <div class="cabecera-tareas">
+                <h2 id="tituloTareas">Tareas de hoy</h2>
+                <button type="button" class="boton-texto" id="botonLimpiar">Borrar las hechas</button>
+            </div>
+
+            <div id="contenidoTareas" aria-live="polite"></div>
+
+            <!-- NAV dentro de la sección: para saltar a los próximos días -->
+            <nav class="proximos" aria-labelledby="tituloProximos">
+                <h3 id="tituloProximos">Próximos días</h3>
+                <ul id="listaProximos"></ul>
+            </nav>
+        </section>
+
+        <!-- ASIDE: información complementaria -->
+        <aside aria-labelledby="tituloResumen">
+            <h2 id="tituloResumen">Resumen</h2>
+
+            <div class="siguiente" id="siguiente">
+                <p>Lo siguiente</p>
+                <strong id="siguienteNombre">Nada pendiente</strong>
+                <time id="siguienteHora"></time>
+            </div>
+
+            <dl class="estadisticas">
+                <div>
+                    <dt>Pendientes</dt>
+                    <dd id="numPendientes">0</dd>
+                </div>
+                <div>
+                    <dt>Urgentes</dt>
+                    <dd id="numAlta">0</dd>
+                </div>
+                <div>
+                    <dt>Hechas</dt>
+                    <dd id="numHechas">0</dd>
+                </div>
+            </dl>
+
+            <div class="bloque-categorias">
+                <h3 class="oculto">Tareas por categoría</h3>
+                <ul class="categorias" id="listaCategorias"></ul>
+            </div>
+
+            <div class="concentracion" id="concentracion">
+                <h3>Modo concentración</h3>
+                <p class="enfoque" id="enfoqueTarea">Elige una tarea pendiente y trabaja sin distracciones.</p>
+                <output class="reloj" id="reloj" aria-live="off">25:00</output>
+                <div class="modos" role="group" aria-label="Duración del bloque">
+                    <button type="button" data-minutos="25" aria-pressed="true">25 min</button>
+                    <button type="button" data-minutos="15" aria-pressed="false">15 min</button>
+                    <button type="button" data-minutos="5" aria-pressed="false">Descanso</button>
+                </div>
+                <div class="controles">
+                    <button type="button" class="boton-reloj" id="botonReloj">Empezar</button>
+                    <button type="button" class="boton-reiniciar" id="botonReiniciar" aria-label="Reiniciar temporizador">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <details>
+                <summary>Consejos para organizarte</summary>
+                <ul>
+                    <li>Empieza por la tarea que más pereza te dé.</li>
+                    <li>Si algo se hace en dos minutos, hazlo ya.</li>
+                    <li>Divide las tareas grandes en pasos pequeños.</li>
+                    <li>Deja huecos libres entre tareas para imprevistos.</li>
+                </ul>
+            </details>
+        </aside>
+
+    </main>
+
+    <!-- =====================================================
+         FOOTER: pie de página
+         ===================================================== -->
+    <footer>
+        <div class="pie">
+            <div>
+                <strong>Mi Día</strong>
+                <p><small>&copy; 2026 Mi Día. Lista de tareas diaria.</small></p>
+            </div>
+            <p>Atajos: <kbd>N</kbd> nueva tarea · <kbd>←</kbd> <kbd>→</kbd> cambiar de día · <kbd>Esc</kbd> cancelar</p>
+            <address>
+                ¿Sugerencias? Escríbenos a <a href="mailto:hola@midia.com">hola@midia.com</a>
+            </address>
+        </div>
+    </footer>
+
+    <!-- Diálogo para confirmar el borrado -->
+    <dialog id="dialogoLimpiar">
+        <h2>¿Borrar las tareas hechas?</h2>
+        <p id="textoDialogo">Se borrarán las tareas que ya has completado.</p>
+        <form method="dialog" class="botones-dialogo">
+            <button value="cancelar" class="boton-secundario">Cancelar</button>
+            <button value="borrar" class="boton-peligro">Borrar</button>
+        </form>
+    </dialog>
+
+    <!-- Aviso para deshacer -->
+    <!-- Confeti cuando se completa el día -->
+    <div class="confeti" id="confeti" aria-hidden="true"></div>
+
+    <div class="aviso" id="aviso" role="status">
+        <span id="textoAviso">Tarea borrada</span>
+        <button type="button" id="botonDeshacer">Deshacer</button>
+    </div>
+
+    <script>
+        /* =========================================================
+           DATOS
+           ========================================================= */
+        const CATEGORIAS = {
+            estudio: { nombre: "Estudio", icono: "📚" },
+            trabajo: { nombre: "Trabajo", icono: "💼" },
+            casa: { nombre: "Casa", icono: "🏠" },
+            salud: { nombre: "Salud", icono: "💪" },
+            ocio: { nombre: "Ocio", icono: "🎮" }
+        };
+
+        const ICONOS = {
+            editar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+            borrar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
+            enfocar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>',
+            vacio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>'
+        };
+
+        const ALTO_HORA = 64;
+
+        const NAVEGADORES = {
+            chrome: { nombre: "Chrome", logo: "🟡", frase: "Abierto en Chrome: azul de mañana despejada y sol de mediodía." },
+            edge: { nombre: "Edge", logo: "🌊", frase: "Abierto en Edge: tonos de ola y verde agua para un día tranquilo." },
+            firefox: { nombre: "Firefox", logo: "🦊", frase: "Abierto en Firefox: un atardecer violeta con brillo de zorro." },
+            safari: { nombre: "Safari", logo: "🧭", frase: "Abierto en Safari: cielo abierto para navegar por tu día." },
+            opera: { nombre: "Opera", logo: "⭕", frase: "Abierto en Opera: rojo intenso para un día con energía." },
+            brave: { nombre: "Brave", logo: "🦁", frase: "Abierto en Brave: naranja de león para ir a por todas." },
+            samsung: { nombre: "Samsung Internet", logo: "🪐", frase: "Abierto en Samsung Internet: violeta espacial en tu móvil." },
+            claude: { nombre: "Claude", logo: "✳️", frase: "Abierto en Claude: tonos cálidos de arcilla para organizarte." },
+            otro: { nombre: "Tu navegador", logo: "🌐", frase: "Apunta lo que tienes que hacer, ordénalo por horas y ve tachando." }
+        };
+
+        let primeraVez = true;
+        let idRecienHecha = null;
+
+        let tareas = [];
+        let diaActual = inicioDelDia(new Date());
+        let filtro = "todas";
+        let vista = "lista";
+        let busqueda = "";
+        let editandoId = null;
+        let ultimaBorrada = null;
+        let idNueva = null;
+        let temporizadorAviso;
+
+        /* =========================================================
+           ELEMENTOS
+           ========================================================= */
+        const formulario = document.getElementById("formulario");
+        const nombreTarea = document.getElementById("nombreTarea");
+        const horaTarea = document.getElementById("horaTarea");
+        const duracionTarea = document.getElementById("duracionTarea");
+        const notaTarea = document.getElementById("notaTarea");
+        const seccionNueva = document.getElementById("nuevaTarea");
+        const contenido = document.getElementById("contenidoTareas");
+        const dialogo = document.getElementById("dialogoLimpiar");
+        const aviso = document.getElementById("aviso");
+
+        /* =========================================================
+           FECHAS
+           ========================================================= */
+        function inicioDelDia(fecha) {
+            return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+        }
+
+        function claveDia(fecha) {
+            return fecha.getFullYear() + "-" +
+                String(fecha.getMonth() + 1).padStart(2, "0") + "-" +
+                String(fecha.getDate()).padStart(2, "0");
+        }
+
+        function sumarDias(fecha, dias) {
+            const nueva = new Date(fecha);
+            nueva.setDate(nueva.getDate() + dias);
+            return nueva;
+        }
+
+        function diferenciaConHoy() {
+            return Math.round((diaActual - inicioDelDia(new Date())) / 86400000);
+        }
+
+        function minutosDe(hora) {
+            if (!hora) return null;
+            const partes = hora.split(":");
+            return Number(partes[0]) * 60 + Number(partes[1]);
+        }
+
+        function horaDe(minutos) {
+            minutos = Math.min(minutos, 1439);
+            return String(Math.floor(minutos / 60)).padStart(2, "0") + ":" + String(minutos % 60).padStart(2, "0");
+        }
+
+        function textoDuracion(minutos) {
+            const horas = Math.floor(minutos / 60);
+            const resto = minutos % 60;
+            if (horas === 0) return resto + " min";
+            return horas + " h" + (resto ? " " + resto + " min" : "");
+        }
+
+        function minutosAhora() {
+            const ahora = new Date();
+            return ahora.getHours() * 60 + ahora.getMinutes();
+        }
+
+        /* =========================================================
+           GUARDAR Y CARGAR
+           ========================================================= */
+        function cargar() {
+            try {
+                const guardadas = localStorage.getItem("midia-tareas");
+                if (guardadas !== null) {
+                    // Las tareas de versiones anteriores no tenían día ni duración
+                    tareas = JSON.parse(guardadas).map(t => ({
+                        ...t,
+                        fecha: t.fecha || claveDia(new Date()),
+                        duracion: t.duracion || 30,
+                        categoria: CATEGORIAS[t.categoria] ? t.categoria : "estudio"
+                    }));
+                    return;
+                }
+            } catch (error) { }
+            tareas = crearEjemplos();
+        }
+
+        function crearEjemplos() {
+            const hoy = claveDia(new Date());
+            const manana = claveDia(sumarDias(new Date(), 1));
+            const ejemplos = [
+                { fecha: hoy, nombre: "Repasar el tema de HTML semántico", hora: "09:00", duracion: 60, prioridad: "alta", categoria: "estudio", nota: "header, nav, main, section, article, aside y footer", hecha: true },
+                { fecha: hoy, nombre: "Entregar la práctica de Lenguaje de Marcas", hora: "11:30", duracion: 45, prioridad: "alta", categoria: "estudio", nota: "" },
+                { fecha: hoy, nombre: "Comer con la familia", hora: "14:30", duracion: 60, prioridad: "media", categoria: "casa", nota: "" },
+                { fecha: hoy, nombre: "Ir al gimnasio", hora: "18:00", duracion: 90, prioridad: "media", categoria: "salud", nota: "Día de pierna" },
+                { fecha: hoy, nombre: "Partida con los amigos", hora: "21:30", duracion: 120, prioridad: "baja", categoria: "ocio", nota: "" },
+                { fecha: hoy, nombre: "Preparar la mochila para mañana", hora: "", duracion: 15, prioridad: "baja", categoria: "casa", nota: "" },
+                { fecha: manana, nombre: "Examen de Programación", hora: "08:30", duracion: 120, prioridad: "alta", categoria: "estudio", nota: "Tema 2: condicionales" },
+                { fecha: manana, nombre: "Hacer la compra", hora: "17:00", duracion: 45, prioridad: "media", categoria: "casa", nota: "" }
+            ];
+            return ejemplos.map((t, i) => ({ id: Date.now() + i, hecha: false, ...t }));
+        }
+
+        function guardar() {
+            try {
+                localStorage.setItem("midia-tareas", JSON.stringify(tareas));
+            } catch (error) { }
+        }
+
+        function tareasDelDia() {
+            const clave = claveDia(diaActual);
+            return tareas.filter(t => t.fecha === clave);
+        }
+
+        /* =========================================================
+           CABECERA: saludo, fecha, días y sol
+           ========================================================= */
+        function actualizarCabecera() {
+            const diferencia = diferenciaConHoy();
+            const hora = new Date().getHours();
+            let titulo;
+
+            if (diferencia === 0) {
+                titulo = "Buenas noches";
+                if (hora >= 6 && hora < 14) titulo = "Buenos días";
+                else if (hora >= 14 && hora < 21) titulo = "Buenas tardes";
+            } else if (diferencia === 1) {
+                titulo = "Mañana";
+            } else if (diferencia === -1) {
+                titulo = "Ayer";
+            } else {
+                titulo = diaActual.toLocaleDateString("es-ES", { weekday: "long" });
+                titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+            }
+            document.getElementById("saludo").textContent = titulo;
+
+            const opciones = { weekday: "long", day: "numeric", month: "long" };
+            if (diaActual.getFullYear() !== new Date().getFullYear()) opciones.year = "numeric";
+            const fecha = document.getElementById("fecha");
+            fecha.dateTime = claveDia(diaActual);
+            fecha.textContent = diaActual.toLocaleDateString("es-ES", opciones);
+
+            const botonHoy = document.getElementById("diaHoy");
+            if (diferencia === 0) botonHoy.setAttribute("aria-current", "date");
+            else botonHoy.removeAttribute("aria-current");
+
+            document.getElementById("tituloTareas").textContent =
+                diferencia === 0 ? "Tareas de hoy" : (diferencia === 1 ? "Tareas de mañana" : "Tareas del día");
+
+            // El sol del fondo sube por la mañana y baja por la noche
+            const altura = Math.sin(Math.PI * Math.min(Math.max((minutosAhora() - 360) / 960, 0), 1));
+            document.querySelector("header").style.setProperty("--altura-sol", (20 + altura * 70) + "%");
+        }
+
+        function cambiarDia(nuevoDia) {
+            diaActual = inicioDelDia(nuevoDia);
+            if (editandoId !== null) salirDeEdicion();
+            actualizarCabecera();
+            pintar();
+        }
+
+        document.getElementById("diaAnterior").addEventListener("click", () => cambiarDia(sumarDias(diaActual, -1)));
+        document.getElementById("diaSiguiente").addEventListener("click", () => cambiarDia(sumarDias(diaActual, 1)));
+        document.getElementById("diaHoy").addEventListener("click", () => cambiarDia(new Date()));
+
+        /* =========================================================
+           UTILIDADES PARA PINTAR
+           ========================================================= */
+        function ordenarPorHora(a, b) {
+            const ma = minutosDe(a.hora);
+            const mb = minutosDe(b.hora);
+            if (ma === null && mb === null) return 0;
+            if (ma === null) return 1;
+            if (mb === null) return -1;
+            return ma - mb;
+        }
+
+        // Escribe el texto y resalta con <mark> lo que se está buscando
+        function escribirConResaltado(elemento, texto) {
+            elemento.textContent = "";
+            if (!busqueda) {
+                elemento.textContent = texto;
+                return;
+            }
+            const minus = texto.toLowerCase();
+            const buscado = busqueda.toLowerCase();
+            let inicio = 0;
+            let pos = minus.indexOf(buscado);
+            while (pos !== -1) {
+                elemento.append(texto.slice(inicio, pos));
+                const marca = document.createElement("mark");
+                marca.textContent = texto.slice(pos, pos + buscado.length);
+                elemento.append(marca);
+                inicio = pos + buscado.length;
+                pos = minus.indexOf(buscado, inicio);
+            }
+            elemento.append(texto.slice(inicio));
+        }
+
+        function tareasVisibles() {
+            return tareasDelDia()
+                .filter(t => filtro === "todas" || (filtro === "pendientes" ? !t.hecha : t.hecha))
+                .filter(t => !busqueda || (t.nombre + " " + t.nota).toLowerCase().includes(busqueda.toLowerCase()))
+                .sort(ordenarPorHora);
+        }
+
+        function crearBotonAccion(clase, icono, etiqueta, alPulsar) {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "accion " + clase;
+            boton.innerHTML = icono;
+            boton.setAttribute("aria-label", etiqueta);
+            boton.title = etiqueta.split(":")[0];
+            boton.addEventListener("click", alPulsar);
+            return boton;
+        }
+
+        /* =========================================================
+           ARTICLE: cada tarea de la lista
+           ========================================================= */
+        function crearArticulo(tarea) {
+            const articulo = document.createElement("article");
+            articulo.dataset.id = tarea.id;
+            articulo.className = "tarea p-" + tarea.prioridad +
+                (tarea.hecha ? " hecha" : "") +
+                (tarea.id === idNueva ? " nueva" : "") +
+                (tarea.id === editandoId ? " editando" : "") +
+                (tarea.id === idRecienHecha ? " recien-hecha" : "");
+
+            const casilla = document.createElement("input");
+            casilla.type = "checkbox";
+            casilla.className = "check";
+            casilla.checked = tarea.hecha;
+            casilla.setAttribute("aria-label", "Marcar como hecha: " + tarea.nombre);
+            casilla.addEventListener("change", () => alternar(tarea.id));
+
+            const cuerpo = document.createElement("div");
+
+            const titulo = document.createElement("h4");
+            const textoTitulo = document.createElement("span");
+            textoTitulo.className = "texto";
+            escribirConResaltado(textoTitulo, tarea.nombre);
+            titulo.append(textoTitulo);
+            titulo.addEventListener("dblclick", () => empezarEdicion(tarea.id));
+            cuerpo.append(titulo);
+
+            if (tarea.nota) {
+                const nota = document.createElement("p");
+                nota.className = "nota";
+                escribirConResaltado(nota, tarea.nota);
+                cuerpo.append(nota);
+            }
+
+            const meta = document.createElement("p");
+            meta.className = "meta";
+            if (tarea.hora) {
+                const inicio = document.createElement("time");
+                inicio.dateTime = tarea.hora;
+                inicio.textContent = tarea.hora;
+                const fin = document.createElement("time");
+                const horaFin = horaDe(minutosDe(tarea.hora) + tarea.duracion);
+                fin.dateTime = horaFin;
+                fin.textContent = horaFin;
+                const rango = document.createElement("span");
+                rango.append(inicio, " – ", fin);
+                meta.append(rango);
+            } else {
+                const duracion = document.createElement("span");
+                duracion.textContent = textoDuracion(tarea.duracion);
+                meta.append(duracion);
+            }
+
+            const categoria = CATEGORIAS[tarea.categoria];
+            const etiquetaCategoria = document.createElement("span");
+            etiquetaCategoria.className = "etiqueta";
+            etiquetaCategoria.textContent = categoria.icono + " " + categoria.nombre;
+            meta.append(etiquetaCategoria);
+
+            const etiquetaPrioridad = document.createElement("span");
+            etiquetaPrioridad.className = "etiqueta prioridad";
+            etiquetaPrioridad.textContent = "Prioridad " + tarea.prioridad;
+            meta.append(etiquetaPrioridad);
+            cuerpo.append(meta);
+
+            const acciones = document.createElement("div");
+            acciones.className = "acciones";
+            if (!tarea.hecha) {
+                acciones.append(crearBotonAccion("enfocar", ICONOS.enfocar, "Concentrarme en: " + tarea.nombre, () => enfocarTarea(tarea.id)));
+            }
+            acciones.append(
+                crearBotonAccion("editar", ICONOS.editar, "Editar: " + tarea.nombre, () => empezarEdicion(tarea.id)),
+                crearBotonAccion("borrar", ICONOS.borrar, "Borrar: " + tarea.nombre, () => borrarTarea(tarea.id))
+            );
+
+            articulo.append(casilla, cuerpo, acciones);
+            return articulo;
+        }
+
+        /* =========================================================
+           VISTA LISTA (mañana, tarde, noche)
+           ========================================================= */
+        function pintarLista(lista) {
+            const grupos = [
+                { titulo: "☀️ Mañana", tareas: lista.filter(t => t.hora && minutosDe(t.hora) < 720) },
+                { titulo: "🌤️ Tarde", tareas: lista.filter(t => t.hora && minutosDe(t.hora) >= 720 && minutosDe(t.hora) < 1200) },
+                { titulo: "🌙 Noche", tareas: lista.filter(t => t.hora && minutosDe(t.hora) >= 1200) },
+                { titulo: "🕓 Sin hora", tareas: lista.filter(t => !t.hora) }
+            ];
+
+            let contador = 0;
+            grupos.forEach(grupo => {
+                if (grupo.tareas.length === 0) return;
+                const bloque = document.createElement("div");
+                bloque.className = "grupo";
+                const titulo = document.createElement("h3");
+                titulo.textContent = grupo.titulo;
+                const contenedor = document.createElement("div");
+                contenedor.className = "lista";
+                grupo.tareas.forEach(t => {
+                    const articulo = crearArticulo(t);
+                    articulo.style.setProperty("--i", contador++);
+                    contenedor.append(articulo);
+                });
+                bloque.append(titulo, contenedor);
+                contenido.append(bloque);
+            });
+        }
+
+        /* =========================================================
+           VISTA HORARIO (línea del día)
+           ========================================================= */
+        function pintarHorario(lista) {
+            const conHora = lista.filter(t => t.hora);
+            const sinHora = lista.filter(t => !t.hora);
+
+            // Las horas que se muestran se ajustan a las tareas
+            let primera = 7;
+            let ultima = 23;
+            conHora.forEach(t => {
+                const inicio = minutosDe(t.hora);
+                primera = Math.min(primera, Math.floor(inicio / 60));
+                ultima = Math.max(ultima, Math.ceil((inicio + t.duracion) / 60));
+            });
+            ultima = Math.min(ultima, 24);
+
+            if (sinHora.length > 0) {
+                const caja = document.createElement("div");
+                caja.className = "sin-hora";
+                caja.append("Sin hora:");
+                sinHora.forEach(t => caja.append(crearBloque(t)));
+                contenido.append(caja);
+            }
+
+            const linea = document.createElement("div");
+            linea.className = "linea-dia";
+
+            for (let h = primera; h < ultima; h++) {
+                const fila = document.createElement("div");
+                fila.className = "hora-fila";
+                const etiqueta = document.createElement("span");
+                etiqueta.textContent = String(h).padStart(2, "0") + ":00";
+                fila.append(etiqueta);
+                linea.append(fila);
+            }
+
+            // Si dos tareas coinciden en el tiempo, se ponen una al lado de la otra
+            const ordenadas = [...conHora].sort(ordenarPorHora);
+            let carriles = [];
+            let grupo = [];
+            let finGrupo = -1;
+
+            function cerrarGrupo() {
+                grupo.forEach(item => item.total = carriles.length);
+                grupo = [];
+                carriles = [];
+            }
+
+            const colocadas = ordenadas.map(t => {
+                const inicio = minutosDe(t.hora);
+                const fin = inicio + t.duracion;
+                if (inicio >= finGrupo) cerrarGrupo();
+                let carril = carriles.findIndex(finCarril => finCarril <= inicio);
+                if (carril === -1) {
+                    carril = carriles.length;
+                    carriles.push(fin);
+                } else {
+                    carriles[carril] = fin;
+                }
+                finGrupo = Math.max(finGrupo, fin);
+                const item = { tarea: t, inicio, carril, total: 1 };
+                grupo.push(item);
+                return item;
+            });
+            cerrarGrupo();
+
+            const bloques = document.createElement("div");
+            bloques.className = "bloques";
+            colocadas.forEach(item => {
+                const bloque = crearBloque(item.tarea);
+                const alto = Math.max(item.tarea.duracion / 60 * ALTO_HORA - 4, 30);
+                bloque.style.top = ((item.inicio - primera * 60) / 60 * ALTO_HORA + 2) + "px";
+                bloque.style.height = alto + "px";
+                bloque.style.left = "calc(" + (item.carril * 100 / item.total) + "% + " + (item.carril ? 3 : 0) + "px)";
+                bloque.style.right = "auto";
+                bloque.style.width = "calc(" + (100 / item.total) + "% - " + (item.total > 1 ? 3 : 0) + "px)";
+                if (alto < 46) bloque.querySelector("small")?.remove();
+                bloques.append(bloque);
+            });
+            linea.append(bloques);
+
+            // Línea amarilla con la hora actual (solo hoy)
+            const ahora = minutosAhora();
+            if (diferenciaConHoy() === 0 && ahora >= primera * 60 && ahora <= ultima * 60) {
+                const marcaAhora = document.createElement("div");
+                marcaAhora.className = "ahora";
+                marcaAhora.style.top = ((ahora - primera * 60) / 60 * ALTO_HORA) + "px";
+                marcaAhora.title = "Ahora";
+                linea.append(marcaAhora);
+            }
+
+            contenido.append(linea);
+        }
+
+        function crearBloque(tarea) {
+            const bloque = document.createElement("button");
+            bloque.type = "button";
+            bloque.className = "bloque p-" + tarea.prioridad + (tarea.hecha ? " hecha" : "");
+            bloque.title = (tarea.hecha ? "Marcar como pendiente" : "Marcar como hecha") + " · doble clic para editar";
+
+            const fila = document.createElement("span");
+            fila.className = "linea-bloque";
+            if (tarea.hora) {
+                const hora = document.createElement("time");
+                hora.dateTime = tarea.hora;
+                hora.textContent = tarea.hora;
+                fila.append(hora);
+            }
+            const nombre = document.createElement("span");
+            escribirConResaltado(nombre, CATEGORIAS[tarea.categoria].icono + " " + tarea.nombre);
+            fila.append(nombre);
+            bloque.append(fila);
+
+            if (tarea.hora) {
+                const detalle = document.createElement("small");
+                detalle.textContent = textoDuracion(tarea.duracion) + " · hasta las " + horaDe(minutosDe(tarea.hora) + tarea.duracion);
+                bloque.append(detalle);
+            }
+
+            // Un clic marca la tarea; doble clic la edita
+            let esperaClic;
+            bloque.addEventListener("click", () => {
+                clearTimeout(esperaClic);
+                esperaClic = setTimeout(() => alternar(tarea.id), 220);
+            });
+            bloque.addEventListener("dblclick", () => {
+                clearTimeout(esperaClic);
+                empezarEdicion(tarea.id);
+            });
+            return bloque;
+        }
+
+        /* =========================================================
+           PINTAR TODO
+           ========================================================= */
+        function pintar() {
+            contenido.innerHTML = "";
+            const lista = tareasVisibles();
+
+            if (lista.length === 0) pintarVacio();
+            else if (vista === "lista") pintarLista(lista);
+            else pintarHorario(lista);
+
+            actualizarResumen();
+            idNueva = null;
+        }
+
+        // Marca como hecha una tarea ya pintada sin volver a crearla (así se ve el tachado animado)
+        function pintarSinRecrear(id) {
+            const casilla = [...contenido.querySelectorAll("article.tarea")].find(a => a.dataset.id === String(id));
+            if (!casilla || filtro === "pendientes") {
+                pintar();
+                return;
+            }
+            casilla.classList.add("hecha", "recien-hecha");
+            casilla.querySelector(".check").checked = true;
+            casilla.querySelector(".enfocar")?.remove();
+        }
+
+        function pintarVacio() {
+            const delDia = tareasDelDia();
+            const vacio = document.createElement("div");
+            vacio.className = "vacio";
+            let titulo = diferenciaConHoy() === 0 ? "No tienes tareas para hoy" : "No hay tareas para este día";
+            let texto = "Escribe la primera en el formulario.";
+            if (busqueda) {
+                titulo = "Ninguna tarea coincide con «" + busqueda + "»";
+                texto = "Prueba con otra palabra.";
+            } else if (filtro === "pendientes" && delDia.length > 0) {
+                titulo = "¡Lo has hecho todo!";
+                texto = "No te queda nada pendiente.";
+            } else if (filtro === "hechas" && delDia.length > 0) {
+                titulo = "Todavía no has terminado ninguna";
+                texto = "Marca una tarea cuando la acabes.";
+            }
+            vacio.innerHTML = ICONOS.vacio;
+            const fuerte = document.createElement("strong");
+            fuerte.textContent = titulo;
+            const parrafo = document.createElement("p");
+            parrafo.textContent = texto;
+            vacio.append(fuerte, parrafo);
+            contenido.append(vacio);
+        }
+
+        /* =========================================================
+           RESUMEN (header, nav y aside)
+           ========================================================= */
+        function actualizarResumen() {
+            const delDia = tareasDelDia();
+            const total = delDia.length;
+            const hechas = delDia.filter(t => t.hecha).length;
+            const pendientes = total - hechas;
+            const porcentaje = total === 0 ? 0 : Math.round(hechas / total * 100);
+
+            // Header (la primera vez el anillo se llena con un pequeño retraso)
+            const relleno = document.getElementById("anilloRelleno");
+            const llenarAnillo = () => relleno.style.strokeDashoffset = 326.73 * (1 - porcentaje / 100);
+            if (primeraVez) setTimeout(llenarAnillo, 450);
+            else llenarAnillo();
+            animarNumero(document.getElementById("porcentaje"), porcentaje, "%");
+            document.getElementById("textoProgreso").textContent = total === 0
+                ? "Sin tareas"
+                : (pendientes === 0 ? "¡Día completado!" : hechas + " de " + total + " hechas");
+
+            // Nav
+            document.getElementById("contTodas").textContent = total;
+            document.getElementById("contPendientes").textContent = pendientes;
+            document.getElementById("contHechas").textContent = hechas;
+            document.getElementById("botonLimpiar").disabled = hechas === 0;
+
+            // Aside: números
+            animarNumero(document.getElementById("numPendientes"), pendientes);
+            animarNumero(document.getElementById("numAlta"), delDia.filter(t => !t.hecha && t.prioridad === "alta").length);
+            animarNumero(document.getElementById("numHechas"), hechas);
+
+            // Aside: lo siguiente
+            const pendientesOrdenadas = delDia.filter(t => !t.hecha).sort(ordenarPorHora);
+            let siguiente = pendientesOrdenadas[0];
+            if (diferenciaConHoy() === 0) {
+                const ahora = minutosAhora();
+                siguiente = pendientesOrdenadas.find(t => t.hora && minutosDe(t.hora) + t.duracion > ahora) || siguiente;
+            }
+            const siguienteNombre = document.getElementById("siguienteNombre");
+            const siguienteHora = document.getElementById("siguienteHora");
+            if (siguiente) {
+                siguienteNombre.textContent = siguiente.nombre;
+                siguienteHora.textContent = siguiente.hora ? "A las " + siguiente.hora + " · " + textoDuracion(siguiente.duracion) : "Cuando puedas";
+                siguienteHora.dateTime = siguiente.hora || "";
+            } else {
+                siguienteNombre.textContent = total === 0 ? "Añade tu primera tarea" : "Nada, ¡a descansar!";
+                siguienteHora.textContent = "";
+            }
+
+            // Aside: categorías
+            const listaCategorias = document.getElementById("listaCategorias");
+            listaCategorias.innerHTML = "";
+            Object.keys(CATEGORIAS).forEach(clave => {
+                const deEsta = delDia.filter(t => t.categoria === clave);
+                if (deEsta.length === 0) return;
+                const hechasEsta = deEsta.filter(t => t.hecha).length;
+                const elemento = document.createElement("li");
+                const icono = document.createElement("span");
+                icono.textContent = CATEGORIAS[clave].icono;
+                const nombre = document.createElement("span");
+                nombre.textContent = CATEGORIAS[clave].nombre;
+                const cuenta = document.createElement("span");
+                cuenta.textContent = hechasEsta + "/" + deEsta.length;
+                const barra = document.createElement("progress");
+                barra.max = deEsta.length;
+                barra.value = hechasEsta;
+                barra.setAttribute("aria-label", CATEGORIAS[clave].nombre + ": " + hechasEsta + " de " + deEsta.length);
+                elemento.append(icono, nombre, cuenta, document.createElement("span"), barra);
+                listaCategorias.append(elemento);
+            });
+
+            actualizarEnfoque();
+            pintarProximos();
+        }
+
+        // Los números cuentan hasta su nuevo valor en vez de cambiar de golpe
+        function animarNumero(elemento, valor, sufijo = "") {
+            const inicio = parseInt(elemento.textContent) || 0;
+            if (inicio === valor || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                elemento.textContent = valor + sufijo;
+                return;
+            }
+            const duracion = primeraVez ? 900 : 450;
+            const retraso = primeraVez ? 450 : 0;
+            const comienzo = performance.now() + retraso;
+            cancelAnimationFrame(elemento.animacion);
+            function paso(ahora) {
+                const progreso = Math.min(Math.max((ahora - comienzo) / duracion, 0), 1);
+                const suave = 1 - Math.pow(1 - progreso, 3);
+                elemento.textContent = Math.round(inicio + (valor - inicio) * suave) + sufijo;
+                if (progreso < 1) elemento.animacion = requestAnimationFrame(paso);
+            }
+            elemento.animacion = requestAnimationFrame(paso);
+        }
+
+        /* =========================================================
+           PRÓXIMOS DÍAS
+           ========================================================= */
+        function pintarProximos() {
+            const lista = document.getElementById("listaProximos");
+            lista.innerHTML = "";
+            for (let i = 1; i <= 3; i++) {
+                const dia = sumarDias(diaActual, i);
+                const clave = claveDia(dia);
+                const delDia = tareas.filter(t => t.fecha === clave);
+                const pendientes = delDia.filter(t => !t.hecha);
+
+                const boton = document.createElement("button");
+                boton.type = "button";
+
+                const diferencia = Math.round((dia - inicioDelDia(new Date())) / 86400000);
+                let nombre = dia.toLocaleDateString("es-ES", { weekday: "long" });
+                if (diferencia === 0) nombre = "Hoy";
+                else if (diferencia === 1) nombre = "Mañana";
+                else nombre = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+
+                const textoNombre = document.createElement("span");
+                textoNombre.className = "dia-nombre";
+                textoNombre.textContent = nombre;
+
+                const fecha = document.createElement("time");
+                fecha.className = "dia-fecha";
+                fecha.dateTime = clave;
+                fecha.textContent = dia.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+
+                const puntos = document.createElement("span");
+                puntos.className = "puntos";
+                pendientes.slice(0, 8).forEach(t => {
+                    const punto = document.createElement("i");
+                    punto.className = "p-" + t.prioridad;
+                    puntos.append(punto);
+                });
+
+                const cuenta = document.createElement("span");
+                cuenta.className = "dia-cuenta";
+                cuenta.textContent = delDia.length === 0
+                    ? "Día libre"
+                    : (pendientes.length === 0 ? "Todo hecho" : pendientes.length + (pendientes.length === 1 ? " tarea" : " tareas"));
+
+                boton.append(textoNombre, fecha, puntos, cuenta);
+                boton.setAttribute("aria-label", "Ir a " + nombre + ", " + fecha.textContent + ": " + cuenta.textContent);
+                boton.addEventListener("click", () => {
+                    cambiarDia(dia);
+                    document.querySelector("header").scrollIntoView({ behavior: "smooth" });
+                });
+
+                const elemento = document.createElement("li");
+                elemento.append(boton);
+                lista.append(elemento);
+            }
+        }
+
+        /* =========================================================
+           ACCIONES: marcar, borrar, deshacer
+           ========================================================= */
+        function alternar(id) {
+            const tarea = tareas.find(t => t.id === id);
+            if (!tarea) return;
+            tarea.hecha = !tarea.hecha;
+            guardar();
+            if (tarea.hecha) {
+                idRecienHecha = tarea.id;
+                tarea.hecha = false;
+                pintar();
+                tarea.hecha = true;
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    pintarSinRecrear(tarea.id);
+                    actualizarResumen();
+                }));
+                idRecienHecha = null;
+            } else {
+                pintar();
+            }
+
+            const delDia = tareasDelDia();
+            if (tarea.hecha && delDia.length > 0 && delDia.every(t => t.hecha)) {
+                lanzarConfeti();
+                mostrarAviso("¡Has completado todas las tareas del día! 🎉", false);
+            }
+        }
+
+        function borrarTarea(id) {
+            const posicion = tareas.findIndex(t => t.id === id);
+            if (posicion === -1) return;
+            if (id === editandoId) salirDeEdicion();
+            if (id === tareaEnfoque) tareaEnfoque = null;
+            ultimaBorrada = { tareas: [tareas[posicion]], posiciones: [posicion] };
+            tareas.splice(posicion, 1);
+            guardar();
+            pintar();
+            mostrarAviso("Tarea borrada", true);
+        }
+
+        function mostrarAviso(texto, conDeshacer) {
+            document.getElementById("textoAviso").textContent = texto;
+            document.getElementById("botonDeshacer").hidden = !conDeshacer;
+            aviso.classList.add("visible");
+            clearTimeout(temporizadorAviso);
+            temporizadorAviso = setTimeout(() => aviso.classList.remove("visible"), 5000);
+        }
+
+        document.getElementById("botonDeshacer").addEventListener("click", () => {
+            if (!ultimaBorrada) return;
+            ultimaBorrada.tareas.forEach((tarea, i) => {
+                tareas.splice(Math.min(ultimaBorrada.posiciones[i], tareas.length), 0, tarea);
+            });
+            ultimaBorrada = null;
+            guardar();
+            pintar();
+            aviso.classList.remove("visible");
+        });
+
+        document.getElementById("botonLimpiar").addEventListener("click", () => {
+            const hechas = tareasDelDia().filter(t => t.hecha).length;
+            document.getElementById("textoDialogo").textContent =
+                "Se borrará" + (hechas === 1 ? " 1 tarea completada de este día." : "n " + hechas + " tareas completadas de este día.");
+            dialogo.showModal();
+        });
+
+        dialogo.addEventListener("close", () => {
+            if (dialogo.returnValue !== "borrar") return;
+            const clave = claveDia(diaActual);
+            const borradas = [];
+            const posiciones = [];
+            tareas.forEach((t, i) => {
+                if (t.hecha && t.fecha === clave) {
+                    borradas.push(t);
+                    posiciones.push(i);
+                }
+            });
+            ultimaBorrada = { tareas: borradas, posiciones: posiciones };
+            tareas = tareas.filter(t => !(t.hecha && t.fecha === clave));
+            guardar();
+            pintar();
+            mostrarAviso(borradas.length === 1 ? "1 tarea borrada" : borradas.length + " tareas borradas", true);
+        });
+
+        /* =========================================================
+           FORMULARIO: añadir y editar
+           ========================================================= */
+        function empezarEdicion(id) {
+            const tarea = tareas.find(t => t.id === id);
+            if (!tarea) return;
+            editandoId = id;
+            nombreTarea.value = tarea.nombre;
+            horaTarea.value = tarea.hora;
+            duracionTarea.value = String(tarea.duracion);
+            notaTarea.value = tarea.nota;
+            formulario.prioridad.value = tarea.prioridad;
+            formulario.categoria.value = tarea.categoria;
+
+            document.getElementById("tituloNueva").textContent = "Editar tarea";
+            document.getElementById("botonGuardar").textContent = "Guardar cambios";
+            document.getElementById("botonCancelar").hidden = false;
+            seccionNueva.classList.add("editando");
+            pintar();
+
+            seccionNueva.scrollIntoView({ behavior: "smooth", block: "center" });
+            nombreTarea.focus({ preventScroll: true });
+            nombreTarea.select();
+        }
+
+        function salirDeEdicion() {
+            editandoId = null;
+            formulario.reset();
+            document.getElementById("tituloNueva").textContent = "Nueva tarea";
+            document.getElementById("botonGuardar").textContent = "Añadir tarea";
+            document.getElementById("botonCancelar").hidden = true;
+            seccionNueva.classList.remove("editando");
+        }
+
+        document.getElementById("botonCancelar").addEventListener("click", () => {
+            salirDeEdicion();
+            pintar();
+        });
+
+        formulario.addEventListener("submit", evento => {
+            evento.preventDefault();
+            const nombre = nombreTarea.value.trim();
+            if (nombre === "") {
+                nombreTarea.focus();
+                return;
+            }
+
+            const datos = {
+                nombre: nombre,
+                hora: horaTarea.value,
+                duracion: Number(duracionTarea.value),
+                prioridad: formulario.prioridad.value,
+                categoria: formulario.categoria.value,
+                nota: notaTarea.value.trim()
+            };
+
+            if (editandoId !== null) {
+                const tarea = tareas.find(t => t.id === editandoId);
+                if (tarea) Object.assign(tarea, datos);
+                salirDeEdicion();
+                guardar();
+                pintar();
+                mostrarAviso("Cambios guardados", false);
+                return;
+            }
+
+            const nueva = { id: Date.now(), fecha: claveDia(diaActual), hecha: false, ...datos };
+            tareas.push(nueva);
+            idNueva = nueva.id;
+
+            // Si hay un filtro o una búsqueda que esconde la tarea nueva, se quita
+            if (filtro === "hechas") cambiarFiltro("todas");
+            if (busqueda) {
+                busqueda = "";
+                document.getElementById("busqueda").value = "";
+            }
+
+            guardar();
+            pintar();
+            formulario.reset();
+            nombreTarea.focus();
+        });
+
+        /* =========================================================
+           FILTROS, BÚSQUEDA Y VISTAS
+           ========================================================= */
+        function cambiarFiltro(nuevo) {
+            filtro = nuevo;
+            document.querySelectorAll("[data-filtro]").forEach(b => {
+                b.setAttribute("aria-pressed", b.dataset.filtro === nuevo ? "true" : "false");
+            });
+        }
+
+        document.querySelectorAll("[data-filtro]").forEach(boton => {
+            boton.addEventListener("click", () => {
+                cambiarFiltro(boton.dataset.filtro);
+                pintar();
+            });
+        });
+
+        function cambiarVista(nueva) {
+            vista = nueva;
+            document.querySelectorAll("[data-vista]").forEach(b => {
+                b.setAttribute("aria-pressed", b.dataset.vista === nueva ? "true" : "false");
+            });
+            try { localStorage.setItem("midia-vista", vista); } catch (error) { }
+        }
+
+        document.querySelectorAll("[data-vista]").forEach(boton => {
+            boton.addEventListener("click", () => {
+                cambiarVista(boton.dataset.vista);
+                pintar();
+            });
+        });
+
+        document.getElementById("busqueda").addEventListener("input", evento => {
+            busqueda = evento.target.value.trim();
+            pintar();
+        });
+
+        /* =========================================================
+           MODO CONCENTRACIÓN (temporizador)
+           ========================================================= */
+        const reloj = document.getElementById("reloj");
+        const botonReloj = document.getElementById("botonReloj");
+        const cajaConcentracion = document.getElementById("concentracion");
+        const tituloOriginal = document.title;
+        let minutosBloque = 25;
+        let segundosRestantes = 25 * 60;
+        let intervaloReloj = null;
+        let tareaEnfoque = null;
+
+        function pintarReloj() {
+            const minutos = Math.floor(segundosRestantes / 60);
+            const segundos = segundosRestantes % 60;
+            const texto = String(minutos).padStart(2, "0") + ":" + String(segundos).padStart(2, "0");
+            reloj.textContent = texto;
+            document.title = intervaloReloj ? texto + " · " + tituloOriginal : tituloOriginal;
+        }
+
+        function pararReloj() {
+            clearInterval(intervaloReloj);
+            intervaloReloj = null;
+            botonReloj.textContent = segundosRestantes < minutosBloque * 60 ? "Seguir" : "Empezar";
+            cajaConcentracion.classList.remove("corriendo");
+            pintarReloj();
+        }
+
+        function reiniciarReloj() {
+            clearInterval(intervaloReloj);
+            intervaloReloj = null;
+            segundosRestantes = minutosBloque * 60;
+            botonReloj.textContent = "Empezar";
+            cajaConcentracion.classList.remove("corriendo");
+            pintarReloj();
+        }
+
+        function sonarAviso() {
+            try {
+                const audio = new (window.AudioContext || window.webkitAudioContext)();
+                [0, 0.25, 0.5].forEach(retraso => {
+                    const oscilador = audio.createOscillator();
+                    const volumen = audio.createGain();
+                    oscilador.frequency.value = 880;
+                    volumen.gain.setValueAtTime(0.2, audio.currentTime + retraso);
+                    volumen.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + retraso + 0.2);
+                    oscilador.connect(volumen).connect(audio.destination);
+                    oscilador.start(audio.currentTime + retraso);
+                    oscilador.stop(audio.currentTime + retraso + 0.2);
+                });
+            } catch (error) { }
+        }
+
+        botonReloj.addEventListener("click", () => {
+            if (intervaloReloj) {
+                pararReloj();
+                return;
+            }
+            botonReloj.textContent = "Pausar";
+            cajaConcentracion.classList.add("corriendo");
+            intervaloReloj = setInterval(() => {
+                segundosRestantes--;
+                if (segundosRestantes <= 0) {
+                    segundosRestantes = 0;
+                    sonarAviso();
+                    mostrarAviso(minutosBloque === 5 ? "Descanso terminado, ¡a por la siguiente!" : "¡Bloque terminado! Tómate un descanso", false);
+                    reiniciarReloj();
+                    return;
+                }
+                pintarReloj();
+            }, 1000);
+            pintarReloj();
+        });
+
+        document.getElementById("botonReiniciar").addEventListener("click", reiniciarReloj);
+
+        document.querySelectorAll("[data-minutos]").forEach(boton => {
+            boton.addEventListener("click", () => {
+                minutosBloque = Number(boton.dataset.minutos);
+                document.querySelectorAll("[data-minutos]").forEach(b => {
+                    b.setAttribute("aria-pressed", b === boton ? "true" : "false");
+                });
+                reiniciarReloj();
+            });
+        });
+
+        function enfocarTarea(id) {
+            tareaEnfoque = id;
+            actualizarEnfoque();
+            cajaConcentracion.scrollIntoView({ behavior: "smooth", block: "center" });
+            botonReloj.focus({ preventScroll: true });
+        }
+
+        function actualizarEnfoque() {
+            const texto = document.getElementById("enfoqueTarea");
+            const tarea = tareas.find(t => t.id === tareaEnfoque && !t.hecha);
+            if (tarea) {
+                texto.textContent = "";
+                const fuerte = document.createElement("strong");
+                fuerte.textContent = tarea.nombre;
+                texto.append("Concentrado en: ", fuerte);
+            } else {
+                tareaEnfoque = null;
+                texto.textContent = "Pulsa el reloj de una tarea para concentrarte en ella.";
+            }
+        }
+
+        /* =========================================================
+           CONFETI
+           ========================================================= */
+        function lanzarConfeti() {
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            const caja = document.getElementById("confeti");
+            const colores = ["#FFC23D", "#2B3A8C", "#E5484D", "#2FA38A", "#8E9BFF", "#F5B23D"];
+            for (let i = 0; i < 90; i++) {
+                const pieza = document.createElement("i");
+                pieza.style.left = Math.random() * 100 + "vw";
+                pieza.style.backgroundColor = colores[i % colores.length];
+                pieza.style.setProperty("--x", (Math.random() * 240 - 120) + "px");
+                pieza.style.setProperty("--giro", (Math.random() * 900 - 450) + "deg");
+                pieza.style.setProperty("--duracion", (1.6 + Math.random() * 1.6) + "s");
+                pieza.style.animationDelay = Math.random() * 0.4 + "s";
+                caja.append(pieza);
+            }
+            setTimeout(() => caja.innerHTML = "", 4000);
+        }
+
+        /* =========================================================
+           MODO CLARO / OSCURO
+           ========================================================= */
+        const botonTema = document.getElementById("botonTema");
+
+        function temaActual() {
+            const elegido = document.documentElement.dataset.tema;
+            if (elegido) return elegido;
+            return window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+        }
+
+        function aplicarTema(tema) {
+            document.documentElement.dataset.tema = tema;
+            botonTema.textContent = tema === "oscuro" ? "☀️" : "🌙";
+        }
+
+        botonTema.addEventListener("click", () => {
+            const nuevo = temaActual() === "oscuro" ? "claro" : "oscuro";
+            aplicarTema(nuevo);
+            try { localStorage.setItem("midia-tema", nuevo); } catch (error) { }
+        });
+
+        /* =========================================================
+           ATAJOS DE TECLADO
+           N = nueva tarea · Esc = cancelar edición · ← → = cambiar de día
+           ========================================================= */
+        document.addEventListener("keydown", evento => {
+            const escribiendo = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+            if (dialogo.open || evento.ctrlKey || evento.metaKey || evento.altKey) return;
+
+            if (evento.key === "Escape" && editandoId !== null) {
+                salirDeEdicion();
+                pintar();
+                return;
+            }
+            if (escribiendo) return;
+
+            if (evento.key.toLowerCase() === "n") {
+                evento.preventDefault();
+                nombreTarea.focus();
+            } else if (evento.key === "ArrowLeft") {
+                cambiarDia(sumarDias(diaActual, -1));
+            } else if (evento.key === "ArrowRight") {
+                cambiarDia(sumarDias(diaActual, 1));
+            }
+        });
+
+        /* =========================================================
+           INICIO
+           ========================================================= */
+        try {
+            const temaGuardado = localStorage.getItem("midia-tema");
+            if (temaGuardado) aplicarTema(temaGuardado);
+            if (localStorage.getItem("midia-vista") === "horario") cambiarVista("horario");
+        } catch (error) { }
+        botonTema.textContent = temaActual() === "oscuro" ? "☀️" : "🌙";
+
+        const infoNavegador = NAVEGADORES[document.documentElement.dataset.navegador] || NAVEGADORES.otro;
+        document.getElementById("logoNavegador").textContent = infoNavegador.logo;
+        document.getElementById("nombreNavegador").textContent = infoNavegador.nombre;
+        document.getElementById("fraseDia").textContent = infoNavegador.frase;
+
+        cargar();
+        actualizarCabecera();
+        pintar();
+        pintarReloj();
+        primeraVez = false;
+
+        // La animación de entrada solo se ve al abrir la página
+        setTimeout(() => document.documentElement.classList.remove("entrada"), 1800);
+
+        // Cada minuto se actualiza el saludo, el sol, "lo siguiente" y la línea de "ahora"
+        setInterval(() => {
+            actualizarCabecera();
+            if (editandoId === null) pintar();
+        }, 60000);
+    </script>
+
+</body>
+</html>
